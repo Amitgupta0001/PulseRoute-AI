@@ -1,6 +1,7 @@
 from loader import DataLoader
 from context_retriever import ContextRetriever
 from models import IncomingMessage
+from feature_engine import FeatureEngine
 
 loader = DataLoader().load()
 
@@ -23,5 +24,9 @@ message = IncomingMessage(
 )
 
 context = retriever.retrieve(message)
+features = FeatureEngine.build(message, context)
+
+for key, value in features.items():
+    print(f"{key:25} : {value}")
 
 print(context)
