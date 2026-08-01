@@ -1,5 +1,7 @@
 # AI-Assisted Development Transcript
 
+> **Note:** This document is a curated development transcript derived from the AI-assisted development process. It preserves the key prompts, responses, engineering decisions, and implementation milestones while omitting repetitive debugging output and routine terminal logs for readability.
+
 **Project:** Message Notification Router  
 **Hackathon:** HackerRank Orchestrate AI Hackathon  
 **Assistant:** Antigravity AI (Google DeepMind)  
@@ -218,7 +220,7 @@ Generated predictions produce confidence scores bounded within `[0.70, 0.95]`.
 **Antigravity Response:**
 > Created updated documentation files:
 > 1. `report.md`: Updated to document verified component architecture, Mermaid sequence flows, rule priority logic, and compliance verification table.
-> 2. `README.md`: Structured with project overview, key features, architecture diagram, pipeline breakdown, dataset details, core modules, setup commands, and output schemas.
+> 2. `README.md`: Structured with project overview, key features, architecture diagram, pipeline breakdown, dataset details, core modules, setup commands, and output specifications.
 > 3. `requirements.txt`: Created and populated with pinned project dependencies (`pandas`, `rapidfuzz`, `easyocr`, `faster-whisper`).
 
 **Developer Decision:**
@@ -240,7 +242,7 @@ Repository documentation accurately reflects the codebase implementation.
 > **Batch Output Check:**
 > - Processed all 110 input messages from `dataset/messages.csv`.
 > - Generated 110 output rows in `output.csv`.
-> - Verified all 6 required columns: `message_id`, `action`, `message_type`, `reason`, `confidence`, `evidence_message_ids`.
+> - Verified that the generated output contains all 6 required columns: `message_id`, `action`, `message_type`, `reason`, `confidence`, `evidence_message_ids`.
 > - Confirmed 0 null or NaN values across the dataset.
 > - Saved outputs to `code/output/output.csv`, `dataset/output.csv`, and `output.csv`.
 
@@ -256,7 +258,7 @@ Output prediction CSV files generated and validated across all required project 
 
 | Engineering Decision | Rationale |
 | :--- | :--- |
-| **Deterministic Priority Cascade** | Chosen over LLM API calls to eliminate network latency, guarantee reproducible predictions, and operate offline. |
+| **Deterministic Priority Cascade** | Chosen over LLM API calls to eliminate network latency, provide deterministic and reproducible predictions, and operate offline. |
 | **In-Memory Hash Map Caching** | Indexing relational DataFrames into dictionary maps during startup converts context queries into constant-time lookups during batch processing. |
 | **Hybrid Evidence Score** | Combining text similarity with metadata matching prevents false evidence associations across unrelated senders. |
 | **Bounded Confidence Calibration** | Constraining confidence outputs between 0.70 and 0.95 provides calibrated probability estimates while avoiding uncalibrated extreme values. |
@@ -286,7 +288,7 @@ Batch execution was verified by running `python3 code/generate_output.py`:
 
 - **Input Messages:** 110 rows processed from `dataset/messages.csv`.
 - **Output Rows:** 110 rows generated in `output.csv`.
-- **Columns Verified:** `message_id`, `action`, `message_type`, `reason`, `confidence`, `evidence_message_ids`.
+- **Columns Verified:** Verified that the generated output contains all 6 required columns (`message_id`, `action`, `message_type`, `reason`, `confidence`, `evidence_message_ids`).
 - **Data Completeness:** 0 null or NaN values detected across generated predictions.
 - **Output Locations Validated:**
   - `code/output/output.csv`
@@ -315,3 +317,11 @@ Batch execution was verified by running `python3 code/generate_output.py`:
 - **Predictions File:** Generated `output.csv` covering all 110 input messages.
 - **Documentation:** Updated `README.md`, `report.md`, and `requirements.txt`.
 - **Git Status:** All changes committed and pushed to remote branch (`main`).
+
+---
+
+## 9. Closing Notes
+
+The project was developed iteratively using Antigravity AI as an engineering assistant for architecture review, code auditing, implementation guidance, debugging, documentation, and validation.
+
+All implementation decisions were reviewed by the developer before integration into the final codebase. The submitted source code, documentation, and output files correspond to the final validated state of the project.
