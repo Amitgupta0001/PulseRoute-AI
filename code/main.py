@@ -2,6 +2,7 @@ from loader import DataLoader
 from context_retriever import ContextRetriever
 from models import IncomingMessage
 from feature_engine import FeatureEngine
+from router import NotificationRouter
 
 loader = DataLoader().load()
 
@@ -25,6 +26,14 @@ message = IncomingMessage(
 
 context = retriever.retrieve(message)
 features = FeatureEngine.build(message, context)
+router = NotificationRouter()
+decision = router.route(message, context)
+
+print()
+
+print("=" * 60)
+
+print(decision)
 
 for key, value in features.items():
     print(f"{key:25} : {value}")
