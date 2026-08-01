@@ -1,296 +1,249 @@
-# AI Development Transcript
+# AI-Assisted Development Transcript
 
-**Project:** Intelligent Automated Message Notification Router  
+**Project:** Message Notification Router  
 **Hackathon:** HackerRank Orchestrate AI Hackathon  
 **Assistant:** Antigravity AI (Google DeepMind)  
 **Date:** August 2, 2026  
 
 ---
 
-## Executive Summary
+## 1. Project Overview
 
-This AI Development Transcript documents the end-to-end engineering lifecycle, architectural auditing, multimodal integration, feature engineering, evidence retrieval optimization, confidence calibration, and technical documentation for the **Message Notification Router** system submitted to the **HackerRank Orchestrate AI Hackathon**.
+This transcript logs the AI-assisted development process for the **Message Notification Router** system submitted to the **HackerRank Orchestrate AI Hackathon**. 
 
-Over the development lifecycle, the system evolved from a partially connected prototype into a high-performance, deterministic, multimodal AI routing engine. Operating over 12 relational CSV datasets, the system processes text messages, image posters/flyers via EasyOCR, and voice notes via Faster-Whisper to classify incoming notifications into three discrete routing actions (`notify`, `digest`, `mute`), calibrated confidence scores (`0.70` to `0.95`), auditable decision reasons, and semicolon-delimited historical evidence references (`evidence_message_ids`).
+The goal of the project is to classify incoming WhatsApp notifications—including text messages, image attachments, and voice notes—into three discrete routing actions (`notify`, `digest`, `mute`), alongside categorized message types, human-readable reasons, calibrated confidence scores, and historical evidence message references.
 
-Key engineering milestones achieved:
-1. **$O(1)$ Context Indexing:** Conversion of 12 relational DataFrames into in-memory hash maps, eliminating $O(N)$ repeated scanning bottlenecks.
-2. **Multimodal Wiring:** Full integration of EasyOCR and Faster-Whisper engines across single-message and batch prediction pipelines.
-3. **11-Stage Priority Cascade:** Implementation of a strict deterministic rule hierarchy prioritizing security (scams) and transactional updates over general user preferences.
-4. **Hybrid Evidence Retrieval:** Formulation of a weighted similarity model ($0.6 \times \text{text} + 0.4 \times \text{metadata}$) for historical evidence selection.
-5. **Dynamic Bounded Calibration:** Min-max constrained confidence scoring between `[0.70, 0.95]`.
+This document records the prompt-and-response iterations, engineering decisions, codebase audits, multimodal integrations, and verification steps completed during development.
 
 ---
 
-## Phase 1 – Problem Understanding & Challenge Requirements
+## 2. Development Timeline
 
-### Challenge Context & Objective
-Messaging platforms like WhatsApp present severe notification fatigue. Users receive heterogeneous alerts—family emergencies, work discussions, bank updates, promotional broadcasts, noisy group chats, and malicious scams. 
+The development process evolved across seven main iterations:
 
-The objective was to build an intelligent, context-aware notification router that evaluates incoming messages in `dataset/messages.csv` and outputs predictions into a 6-column `output.csv`:
-
-- `action`: Routing decision (`notify`, `digest`, `mute`).
-- `message_type`: Message classification (`personal`, `urgent`, `event`, `payment`, `business_update`, `promotion`, `greeting`, `forward`, `spam`, `scam`, `unknown`).
-- `reason`: Human-readable audit explanation.
-- `confidence`: Calibrated score between `0.0` and `1.0`.
-- `evidence_message_ids`: Top-3 historical message IDs (`msg_1;msg_2;msg_3`) or `"none"`.
-
-### Operational Requirements
-- **Multimodal Support:** Messages containing image attachments or voice notes must have text extracted via OCR or Speech-to-Text before downstream evaluation.
-- **Personalization:** Routing decisions must adapt based on individual user interaction metrics (reply, open, dismiss, report rates), quiet hours, and opt-in settings.
-- **Safety First:** Scam or phishing threats must override user preferences and trigger immediate muting.
+- **Iteration 1 (Architecture Audit):** Evaluated existing source code against technical requirements to identify pipeline gaps.
+- **Iteration 2 (Architecture Documentation):** Updated `report.md` to accurately reflect system components and flow.
+- **Iteration 3 (Context Retrieval):** Optimized context lookup patterns to reduce redundant dataset scans.
+- **Iteration 4 (Multimodal OCR Wiring):** Integrated EasyOCR into both single-message demo and batch prediction execution.
+- **Iteration 5 (Speech Transcription Setup):** Installed missing dependencies (`faster-whisper`) and wired voice note processing.
+- **Iteration 6 (Evidence & Confidence Tuning):** Refined hybrid evidence ranking and bounded confidence calculation.
+- **Iteration 7 (Repository & Submission Prep):** Overhauled `README.md`, populated `requirements.txt`, generated final `output.csv`, and verified repository sync.
 
 ---
 
-## Phase 2 – System Architecture & Module Design
+## 3. Prompt → Response Log
 
-### High-Level Architecture Design
-The architecture was structured into a modular pipeline separating data ingestion, context indexing, media extraction, feature engineering, decision routing, evidence ranking, and output generation.
+### 3.1 Initial Architecture Review
 
-```mermaid
-graph TD
-    A["Incoming Messages (messages.csv)"] --> B["DataLoader Engine"]
-    B --> C["IncomingMessage Model"]
-    
-    C --> D{"Media Check"}
-    D -- "media_type == image" --> E["OCREngine (EasyOCR)"]
-    D -- "media_type == voice" --> F["SpeechEngine (Faster-Whisper)"]
-    D -- "text" --> G["ContextRetriever (O(1) Hash Maps)"]
-    E --> G
-    F --> G
-    
-    G --> H["NotificationRouter"]
-    H --> I["FeatureEngine (Regex & Behavioral Ratios)"]
-    H --> J["ConfidenceEngine (Dynamic Calibration)"]
-    
-    G & C --> K["EvidenceRetriever (Hybrid Ranking)"]
-    
-    H & J & K --> L["Output Generator"]
-    L --> M["output.csv"]
-```
+**Developer Prompt:**
+> "Verify that the CODE actually implements everything claimed in the report. Compare line by line. Only approve something if it is actually implemented. If the report claims something that the code does not do, report it."
 
-### Module Responsibilities
-- `code/loader.py`: Ingests all 12 relational CSV datasets into memory.
-- `code/models.py`: Defines dataclasses for `IncomingMessage` (with NaN sanitization) and `UserContext`.
-- `code/context_retriever.py`: Constructs in-memory hash maps for $O(1)$ contextual lookups.
-- `code/feature_engine.py`: Computes regex keyword flags, user interaction ratios, and DND time window checks.
-- `code/router.py`: Evaluates an 11-stage priority decision rule hierarchy.
-- `code/confidence.py`: Computes dynamic confidence scores bounded between `0.70` and `0.95`.
-- `code/evidence.py`: Executes hybrid text similarity and metadata evidence ranking.
-- `code/media/ocr.py`: Wraps EasyOCR reader for image text extraction.
-- `code/media/speech.py`: Wraps Faster-Whisper model for audio transcription.
-- `code/generate_output.py`: Orchestrates batch inference and CSV exporting.
+**AI Response Summary:**
+> Conducted a line-by-line audit of `code/` against `report.md`. Confirmed that context retrieval, decision routing rules, and evidence scoring logic were present in the codebase. Identified three primary gaps:
+> 1. `faster-whisper` package was missing from the execution environment.
+> 2. `main.py` bypassed `OCREngine` and `SpeechEngine` for single-message execution.
+> 3. `router.py` contained a redundant call to `FeatureEngine.build()`.
+
+**Action Taken:**
+Flagged missing audio dependencies, main script media bypass, and redundant feature engine calls for remediation in subsequent iterations.
 
 ---
 
-## Phase 3 – Dataset Analysis & Relational Indexing
+### 3.2 Dataset Analysis
 
-### Dataset Ingestion Matrix
-The system synthesizes 12 relational tables to construct a complete context graph per incoming message:
+**Developer Prompt:**
+> "Analyze all 12 datasets in `dataset/` and explain how each dataset contributes to the routing decision."
 
-| Dataset | Primary Keys / Foreign Keys | Extracted Context & Purpose |
-| :--- | :--- | :--- |
-| `messages.csv` | `message_id`, `user_id`, `sender_user_id`, `group_id`, `business_id` | Incoming notifications requiring routing decisions |
-| `users.csv` | `user_id` | Quiet hours (`do_not_disturb_window`), aggregate open/reply/dismiss/report counts |
-| `groups.csv` | `group_id` | Group metadata (`group_type`: family, school, work; admin lists; member count) |
-| `group_members.csv` | `group_id`, `user_id` | Role, `replies_sent_30d`, individual `muted_by_user` flag |
-| `business_accounts.csv` | `business_id` | `verified` flag, business `category` (e.g. bank), account age |
-| `user_business_history.csv` | `user_id`, `business_id` | Opt-in preferences (`allows_promotions`), order/booking transaction history |
-| `message_history.csv` | `message_id`, `user_id`, `sender_user_id` | Historical message archive used as memory for evidence retrieval |
-| `message_events.csv` | `message_id`, `event_type` | User interaction reactions (`opened`, `replied`, `dismissed`, `reported`) |
-| `images.csv` | `image_id`, `file_path` | Mapping for image files stored in `dataset/media/images/` |
-| `voice_notes.csv` | `voice_note_id`, `file_path` | Mapping for voice files stored in `dataset/media/audio/` |
-| `daily_notification_summary.csv` | `user_id`, `date` | Historical daily notification counts to track volume |
-| `sample_messages.csv` | `message_id` | Baseline reference format for output schema and labels |
+**AI Response Summary:**
+> Analyzed schema and relationships across all 12 datasets:
+> - `messages.csv`: Primary input messages requiring routing decisions.
+> - `users.csv`: Quiet hours (`do_not_disturb_window`) and aggregate user interaction metrics.
+> - `groups.csv`: Group metadata (`group_type`, admin lists, size).
+> - `group_members.csv`: Member roles, recent replies, and user-level group mute state.
+> - `business_accounts.csv`: Verification status and business category.
+> - `user_business_history.csv`: Opt-in preferences (`allows_promotions`) and order histories.
+> - `message_history.csv`: Archive of past received messages for evidence retrieval.
+> - `message_events.csv`: Granular user reaction logs (`opened`, `replied`, `dismissed`, `reported`).
+> - `images.csv` & `voice_notes.csv`: File path mappings for media payloads in `dataset/media/`.
+> - `daily_notification_summary.csv`: Historical daily message load per user.
+> - `sample_messages.csv`: Ground-truth reference format.
+>
+> Recommended pre-indexing DataFrames into dictionary hash maps during `ContextRetriever` initialization to avoid repeated scanning during batch execution.
 
-### Hash Indexing Optimization
-Initial analysis revealed that filtering pandas DataFrames repeatedly inside prediction loops caused severe performance bottlenecks. To achieve sub-second latency, `ContextRetriever` pre-indexes all relational datasets into nested Python dictionaries during initialization:
-
-```python
-self._users = loader.users.set_index("user_id").to_dict(orient="index")
-self._groups = loader.groups.set_index("group_id").to_dict(orient="index")
-self._group_members = loader.group_members.set_index(["group_id", "user_id"]).to_dict(orient="index")
-```
+**Action Taken:**
+Verified hash dictionary lookups inside `context_retriever.py` to ensure fast context resolution during predictions.
 
 ---
 
-## Phase 4 – Feature Engineering & Context Retrieval
+### 3.3 Routing Improvements
 
-### Feature Engine Design
-The `FeatureEngine` extracts behavioral and keyword signals from incoming messages and user context:
+**Developer Prompt:**
+> "Review the routing decision engine in `router.py` and ensure rules follow a clear priority cascade."
 
-1. **Regex Word Boundary Keyword Matching:**
-   Uses regex pattern matching with `\b` word boundaries to prevent false substring triggers:
-   - `PAYMENT_KEYWORDS`: `payment`, `bank`, `otp`, `account`, `transaction`, `credited`, `debited`
-   - `URGENT_KEYWORDS`: `urgent`, `asap`, `emergency`, `important`, `help`
-   - `PROMOTION_KEYWORDS`: `offer`, `discount`, `sale`, `cashback`, `deal`, `coupon`
-   - `SCAM_KEYWORDS`: `winner`, `lottery`, `prize`, `claim`, `crypto`, `investment`, `verify account`
-   - `EVENT_KEYWORDS`: `event`, `meeting`, `webinar`, `schedule`, `invitation`
+**AI Response Summary:**
+> Evaluated `NotificationRouter.route()` logic. Confirmed an 11-stage priority sequence:
+> 1. Scam & High Risk (forwarded count, scam terms, high report rate) $\rightarrow$ `mute/scam`
+> 2. Verified Bank Payments $\rightarrow$ `notify/payment`
+> 3. Promotional Content (check user business opt-in settings) $\rightarrow$ `digest` or `mute`
+> 4. Family Group Messages $\rightarrow$ `notify/personal`
+> 5. School Group Announcements (event terms) $\rightarrow$ `notify/event`
+> 6. Work Group Discussions (check 30-day reply activity) $\rightarrow$ `notify` or `digest`
+> 7. User-Muted Groups $\rightarrow$ `mute/unknown`
+> 8. Do-Not-Disturb Quiet Hours $\rightarrow$ `digest/unknown`
+> 9. Historical User Reaction (high reply rate vs high dismiss rate)
+> 10. Urgent Personal Messages $\rightarrow$ `notify/urgent`
+> 11. Default Fallback $\rightarrow$ `digest/unknown`
+>
+> Identified and recommended removing the redundant `FeatureEngine.build()` invocation inside `router.py`.
 
-2. **User Interaction Ratios:**
-   Calculates user-specific interaction metrics from historical event logs:
-   $$\text{Reply Rate} = \frac{\text{Replied Messages}}{\max(1, \text{Total History Messages})}$$
-   $$\text{Dismiss Rate} = \frac{\text{Dismissed Messages}}{\max(1, \text{Total History Messages})}$$
-   $$\text{Report Rate} = \frac{\text{Reported Messages}}{\max(1, \text{Total History Messages})}$$
-
-3. **Do-Not-Disturb (DND) Time Window Validation:**
-   Parses `do_not_disturb_window` strings (e.g., `"22:00-07:00"`). Checks whether the incoming message creation timestamp falls within the quiet hour boundaries.
-
----
-
-## Phase 5 – Multimodal Processing (OCR & Speech Integration)
-
-### Media Text Extraction Architecture
-Incoming messages with empty text fields but valid media attachments undergo automated multimodal processing:
-
-1. **EasyOCR Image Engine (`code/media/ocr.py`):**
-   - Resolves `media_id` against `images.csv` to acquire image file path.
-   - Evaluates file existence in `dataset/media/images/`.
-   - Executes EasyOCR reader (`easyocr.Reader(['en'])`) to extract text tokens from screenshots, flyers, or posters.
-   - Reassigns extracted text directly to `message.message_text`.
-
-2. **Faster-Whisper Speech Engine (`code/media/speech.py`):**
-   - Resolves `media_id` against `voice_notes.csv` to acquire audio file path.
-   - Evaluates file existence in `dataset/media/audio/`.
-   - Executes Faster-Whisper (`WhisperModel("tiny")`) to transcribe voice note recordings into text.
-   - Reassigns transcript string directly to `message.message_text`.
-
-### Pipeline Invariance
-By populating `message_text` prior to feature extraction, downstream engines (`FeatureEngine`, `NotificationRouter`, `EvidenceRetriever`) process multimodal text through the exact same feature engineering pipeline as standard text notifications.
+**Action Taken:**
+Cleaned up duplicate feature extraction calls in `router.py`.
 
 ---
 
-## Phase 6 – Evidence Retrieval & Confidence Calibration
+### 3.4 OCR Integration
 
-### Hybrid Evidence Scoring Engine
-The `EvidenceRetriever` identifies historical messages in `message_history.csv` that substantiate the current decision:
+**Developer Prompt:**
+> "Inspect the OCR pipeline and integrate EasyOCR into the main prediction workflow."
 
-1. **Hybrid Scoring Formula:**
-   $$\text{Total Score} = (\text{Text Similarity} \times 0.6) + (\text{Metadata Score} \times 0.4)$$
-   Text similarity is calculated using `rapidfuzz.fuzz.token_sort_ratio`.
+**AI Response Summary:**
+> Inspected `code/media/ocr.py`. Confirmed `OCREngine` wrapped `easyocr.Reader(["en"])` to extract text from images in `dataset/media/images/`. Noted that while `generate_output.py` invoked OCR, `main.py` lacked media extraction logic for sample message verification.
 
-2. **Metadata Weight Distribution:**
-   - Sender User ID Match: $+45.0$
-   - Business ID Match: $+35.0$
-   - Media Type Match: $+25.0$
-   - Group ID Match: $+20.0$
-   - Conversation Type Match: $+15.0$
-
-3. **Selection & Formatting:**
-   Historical candidate messages with a score $> 40.0$ are sorted descending. Up to 3 unique message IDs are joined into a semicolon-separated string (e.g. `"message_0101;message_0102;message_0103"`). If no message meets the threshold, `"none"` is returned.
-
-### Bounded Confidence Calibration
-The `ConfidenceEngine` computes dynamic confidence scores starting from a base score of `0.75`:
-
-| Feature Condition | Delta Adjustment |
-| :--- | :---: |
-| Verified Business Account | `+0.04` |
-| Known Business Subscriber | `+0.03` |
-| Payment Keywords Present | `+0.03` |
-| Urgent Keywords Present | `+0.03` |
-| Event Keywords Present | `+0.02` |
-| Scam/Phishing Keywords Detected | `+0.05` |
-| User Report Rate $\ge 20\%$ | `+0.04` |
-| User Reply Rate $\ge 40\%$ | `+0.03` |
-| User Dismiss Rate $\ge 50\%$ | `+0.03` |
-| Unallowed Promotional Message | `+0.02` |
-| Non-Urgent DND Delivery | `-0.02` |
-
-The aggregated score is clamped strictly between `[0.70, 0.95]` and rounded to two decimal places.
+**Action Taken:**
+Updated `main.py` to instantiate `OCREngine` and process image payloads before building features and context.
 
 ---
 
-## Phase 7 – Code Audit, Refactoring & Performance Tuning
+### 3.5 Speech Integration
 
-### Codebase Auditing & Issues Fixed
-During architectural auditing, several integration gaps were identified and resolved:
+**Developer Prompt:**
+> "Resolve the voice note transcription failure in `media/speech.py` and test audio processing."
 
-1. **Dependency Resolution:** Installed missing `faster-whisper` package in the execution environment to enable voice note transcription.
-2. **Main Demo Pipeline Synchronization:** Refactored `code/main.py` to instantiate `OCREngine` and `SpeechEngine` for single-message verification demos before calling feature building and decision routing.
-3. **Redundant Logic Removal:** Removed duplicate `FeatureEngine.build` calls inside `router.py` to avoid redundant computation.
-4. **Data Sanitization:** Enhanced `IncomingMessage.__post_init__` to convert `NaN` values to `None` and enforce integer casts on `forwarded_count`.
+**AI Response Summary:**
+> Analyzed terminal output showing `No module named 'faster_whisper'`. Confirmed `SpeechEngine` required `faster-whisper` for audio transcription. Recommended installing package in virtual environment and updating `main.py` to support voice note files in `dataset/media/audio/`.
 
----
-
-## Phase 8 – Production Documentation & Repository Presentation
-
-### Documentation Suite Upgrades
-To ensure open-source repository quality for judges and recruiters:
-
-1. **`report.md` Overhaul:** Updated the technical architecture report with comprehensive subsystem specifications, Mermaid lifecycle diagrams, mathematical evidence formulas, decision hierarchy tables, and audit verification matrices.
-2. **`README.md` Rewrite:** Rewrote `README.md` to production quality, documenting project overview, challenge requirements, key features, architecture, end-to-end pipeline, dataset usage, core components, routing hierarchy, multimodal setup, confidence calibration, evidence ranking, installation steps, and future roadmap.
-3. **Dependency Specification:** Created and populated `requirements.txt` with pinned requirements (`pandas`, `rapidfuzz`, `easyocr`, `faster-whisper`).
+**Action Taken:**
+Installed `faster-whisper` and its underlying dependencies (`ctranslate2`, `onnxruntime`, `av`, `huggingface-hub`) into `.venv`. Updated `main.py` to trigger `SpeechEngine` for voice media types.
 
 ---
 
-## Phase 9 – Final Evaluation, Output Validation & Submission Verification
+### 3.6 Evidence Retrieval
 
-### Batch Prediction Execution
-Executed `python3 code/generate_output.py` to process all 110 incoming messages in `dataset/messages.csv`.
+**Developer Prompt:**
+> "Review how historical message evidence is retrieved and ranked."
 
-### Output Validation Metrics
-- **Row Count:** 110 predictions generated matching input size.
-- **Column Integrity:** 6 mandatory columns present (`message_id`, `action`, `message_type`, `reason`, `confidence`, `evidence_message_ids`).
-- **Data Quality:** Zero missing/NaN values across all generated outputs.
-- **File Synchronization:** Generated output validated at `code/output/output.csv`, `dataset/output.csv`, and `output.csv`.
+**AI Response Summary:**
+> Inspected `code/evidence.py`. Confirmed `EvidenceRetriever` calculated a combined score:
+> - 60% weight from RapidFuzz `token_sort_ratio` text similarity.
+> - 40% weight from metadata match scores (sender match +45, business match +35, media match +25, group match +20, conversation type match +15).
+>
+> Historical candidate messages scoring above threshold 40.0 are sorted descending, returning the top-3 message IDs as a semicolon-separated string (e.g. `msg_1;msg_2;msg_3`) or `"none"` if no candidate qualifies.
+
+**Action Taken:**
+Validated threshold handling and evidence output formatting.
 
 ---
 
-## Engineering Decisions
+### 3.7 Confidence Calibration
 
-| Decision | Engineering Rationale |
+**Developer Prompt:**
+> "Verify how confidence scores are calculated and bounded."
+
+**AI Response Summary:**
+> Inspected `code/confidence.py`. Confirmed `ConfidenceEngine` starts at a base score of 0.75, adjusting values based on feature flags (e.g., +0.04 for verified business, +0.05 for scam keywords, +0.03 for high reply rate, -0.02 for non-urgent DND delivery). Final scores are bounded between `0.70` and `0.95` and rounded to 2 decimal places.
+
+**Action Taken:**
+Verified that confidence outputs remain within the bounded range across batch runs.
+
+---
+
+### 3.8 Documentation
+
+**Developer Prompt:**
+> "Generate a complete, open-source quality README.md and update report.md to reflect the actual implementation."
+
+**AI Response Summary:**
+> Overhauled `report.md` to document the verified architecture, sequence diagrams, rule priority list, and compliance matrix. Created a comprehensive `README.md` covering project overview, key features, Mermaid architecture, dataset breakdown, core components, setup instructions, and output specifications. Created `requirements.txt` listing all necessary packages.
+
+**Action Taken:**
+Wrote updated `report.md`, `README.md`, and `requirements.txt` to the project directory.
+
+---
+
+### 3.9 Final Evaluation
+
+**Developer Prompt:**
+> "Run the full prediction pipeline and verify output.csv formatting."
+
+**AI Response Summary:**
+> Executed `generate_output.py`. Processed all 110 messages in `dataset/messages.csv`, invoking EasyOCR and Faster-Whisper for media attachments, retrieving context, evaluating rules, and ranking evidence. Saved output predictions to `code/output/output.csv`, `dataset/output.csv`, and `output.csv`. Verified all 6 mandatory columns were populated without missing values.
+
+**Action Taken:**
+Validated output files and committed updates to remote Git repository.
+
+---
+
+## 4. Major Engineering Decisions
+
+| Engineering Decision | Rationale |
 | :--- | :--- |
-| **Deterministic Priority Hierarchy** | Selected over pure LLM calls to ensure zero inference latency, 100% reproducible predictions, and zero external API dependencies. |
-| **In-Memory Hash Map Caching** | Converted 12 relational DataFrames into dictionary lookups during startup to achieve $O(1)$ retrieval speeds and sub-second batch runs. |
-| **Hybrid Evidence Scoring Formula** | Combined token-sort similarity ($60\%$) with metadata matching ($40\%$) to prevent false evidence matches across unrelated senders. |
-| **Bounded Min-Max Confidence** | Bounded confidence scores within `[0.70, 0.95]` to provide calibrated probability estimates while avoiding overconfident edge values (`1.0` / `0.0`). |
-| **Multimodal Text Pre-Processing** | Extracted text from images and voice notes prior to feature building, maintaining pipeline invariance across text and media notifications. |
-| **Regex Boundary Pattern Matching (`\b`)** | Used word boundaries in keyword regex patterns to prevent false substring matches (e.g. preventing `"car"` inside `"scam"`). |
+| **Deterministic Priority Cascade** | Chosen over pure LLM calls to eliminate API latency, guarantee 100% reproducible results, and operate offline without external services. |
+| **In-Memory Hash Map Caching** | Indexing relational DataFrames into dictionary maps during startup converts context queries into constant-time lookups during batch processing. |
+| **Hybrid Evidence Score** | Combining text similarity with metadata matching prevents false evidence associations across unrelated senders. |
+| **Bounded Confidence Scores** | Constraining confidence outputs between 0.70 and 0.95 provides calibrated probability estimates while avoiding overconfident extreme values (1.0 or 0.0). |
+| **Pre-Extraction Media Normalization** | Converting images (OCR) and audio (Speech-to-Text) into text before feature extraction allows downstream engines to treat all notifications uniformly. |
 
 ---
 
-## Challenges Encountered & Resolutions
+## 5. Challenges & Fixes
 
-1. **Missing Audio Dependency (`faster-whisper`):**
-   - *Challenge:* Initial environment lacked the `faster-whisper` package, causing voice transcription calls to fall back without audio text.
-   - *Resolution:* Installed `faster-whisper` and its underlying `ctranslate2` dependencies in `.venv`, enabling transcription models.
+1. **Missing Audio Transcription Module:**
+   - *Challenge:* Terminal execution threw `ModuleNotFoundError: No module named 'faster_whisper'`, bypassing voice note transcription.
+   - *Fix:* Installed `faster-whisper` package in the Python virtual environment.
 
-2. **Performance Bottlenecks in Batch Inference:**
-   - *Challenge:* Filtering pandas DataFrames inside nested loops for each message caused slow execution.
-   - *Resolution:* Pre-indexed all 12 datasets into dictionary hash maps in `ContextRetriever`, converting queries to $O(1)$ lookups.
+2. **Bypassed Media Extraction in Single Demo:**
+   - *Challenge:* `generate_output.py` handled OCR and Speech, but `main.py` single-message demo did not trigger media engines.
+   - *Fix:* Added `OCREngine` and `SpeechEngine` initialization and extraction logic to `main.py`.
 
-3. **Pipeline Inconsistencies between `main.py` and `generate_output.py`:**
-   - *Challenge:* `generate_output.py` handled media extraction, but `main.py` demo bypassed OCR and Speech engines.
-   - *Resolution:* Refactored `main.py` to invoke `OCREngine` and `SpeechEngine` prior to feature building.
-
----
-
-## Improvements Made Checklist
-
-- [x] Installed and configured `faster-whisper` package in execution virtual environment.
-- [x] Integrated `OCREngine` (EasyOCR) for image attachment text extraction.
-- [x] Integrated `SpeechEngine` (Faster-Whisper) for voice note transcription.
-- [x] Implemented $O(1)$ hash map context indexing in `ContextRetriever`.
-- [x] Implemented 11-stage priority decision rule cascade in `NotificationRouter`.
-- [x] Implemented dynamic bounded confidence calibration (`[0.70, 0.95]`) in `ConfidenceEngine`.
-- [x] Implemented hybrid text similarity and metadata evidence ranking in `EvidenceRetriever`.
-- [x] Sanitized `IncomingMessage` dataclass attribute cleaning.
-- [x] Verified zero missing/NaN values across 110 predictions in `output.csv`.
-- [x] Overhauled `report.md` technical architecture documentation.
-- [x] Created production-grade `README.md` repository showcase.
-- [x] Created and populated `requirements.txt`.
-- [x] Synchronized commits and pushed all code to remote GitHub repository (`main` branch).
+3. **Redundant Feature Extraction Calls:**
+   - *Challenge:* `router.py` re-executed `FeatureEngine.build()`, duplicating calculations already performed in the pipeline loop.
+   - *Fix:* Streamlined `router.py` to accept pre-built feature dictionaries.
 
 ---
 
-## Final Outcome & Submission Readiness
+## 6. Final Verification
 
-The **Intelligent Automated Message Notification Router** is complete, fully tested, and verified ready for hackathon submission.
+Batch execution was verified by running `python3 code/generate_output.py`:
 
-### Final Artifacts Summary
-- **Source Code (`code/`):** Full Python implementation containing models, loader, context retriever, feature engine, router, confidence engine, evidence retriever, and media engines.
-- **Predictions (`output.csv`):** Validated output file containing predictions for all 110 incoming messages.
-- **Architecture Report (`report.md`):** Complete production design and verification report.
-- **Repository Showcase (`README.md`):** Production-grade README documentation.
-- **Dependencies (`requirements.txt`):** Pinned requirement specifications.
-- **Remote Repository:** Synchronized on GitHub at `https://github.com/Amitgupta0001/PulseRoute-AI.git`.
+- **Input Messages:** 110 rows processed from `dataset/messages.csv`.
+- **Output Rows:** 110 rows generated in `output.csv`.
+- **Columns Verified:** `message_id`, `action`, `message_type`, `reason`, `confidence`, `evidence_message_ids`.
+- **Data Completeness:** 0 null or NaN values detected across generated predictions.
+- **Output Locations Validated:**
+  - `code/output/output.csv`
+  - `dataset/output.csv`
+  - `output.csv`
+
+---
+
+## 7. AI Prompts Used
+
+| Prompt Objective | Purpose in Development |
+| :--- | :--- |
+| **Architecture Audit** | Line-by-line code verification against report specifications |
+| **Dataset Analysis** | Relational mapping across all 12 dataset files |
+| **Routing Hierarchy Review** | Evaluation of rule priorities in `router.py` |
+| **OCR Pipeline Wiring** | Integrating EasyOCR into prediction scripts |
+| **Speech Module Setup** | Installing `faster-whisper` and resolving audio transcription |
+| **Evidence & Confidence Review** | Verifying hybrid ranking formulas and bounded confidence scoring |
+| **Documentation Generation** | Creating production-quality `README.md`, `report.md`, and `requirements.txt` |
+| **Batch Verification** | Generating and validating 110 predictions in `output.csv` |
+
+---
+
+## 8. Submission Summary
+
+- **Source Code:** Fully functional Python codebase in `code/` with modular structure.
+- **Predictions File:** Generated `output.csv` covering all 110 input messages.
+- **Documentation:** Updated `README.md`, `report.md`, and `requirements.txt`.
+- **Git Status:** All changes committed and pushed to remote branch (`main`).
