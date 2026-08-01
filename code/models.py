@@ -36,6 +36,10 @@ class UserContext:
 
     business: Optional[dict]
 
+    group_membership: Optional[dict]
+
+    business_history: Optional[dict]
+
     history: list
 
     events: list

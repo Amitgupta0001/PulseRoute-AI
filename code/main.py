@@ -1,20 +1,27 @@
 from loader import DataLoader
-from explorer import DataExplorer
+from context_retriever import ContextRetriever
+from models import IncomingMessage
 
 loader = DataLoader().load()
 
-DataExplorer.explore(loader.messages, "Messages")
-DataExplorer.explore(loader.users, "Users")
-DataExplorer.explore(loader.groups, "Groups")
-DataExplorer.explore(loader.group_members, "Group Members")
-DataExplorer.explore(loader.business_accounts, "Business Accounts")
-DataExplorer.explore(loader.user_business_history, "User Business History")
-DataExplorer.explore(loader.message_history, "Message History")
-DataExplorer.explore(loader.message_events, "Message Events")
-DataExplorer.explore(loader.images, "Images")
-DataExplorer.explore(loader.voice_notes, "Voice Notes")
-DataExplorer.explore(
-    loader.daily_notification_summary,
-    "Daily Notification Summary"
+retriever = ContextRetriever(loader)
+
+row = loader.messages.iloc[0]
+
+message = IncomingMessage(
+    message_id=row["message_id"],
+    user_id=row["user_id"],
+    conversation_type=row["conversation_type"],
+    group_id=row["group_id"],
+    business_id=row["business_id"],
+    sender_user_id=row["sender_user_id"],
+    created_at=row["created_at"],
+    message_text=row["message_text"],
+    media_type=row["media_type"],
+    media_id=row["media_id"],
+    forwarded_count=row["forwarded_count"],
 )
-DataExplorer.explore(loader.sample_messages, "Sample Messages")
+
+context = retriever.retrieve(message)
+
+print(context)
