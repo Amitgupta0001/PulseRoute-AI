@@ -373,15 +373,6 @@ Future architectural extensions for production scaling include:
 - **Semantic Vector Embeddings:** Replacing token-based similarity in `EvidenceRetriever` with dense sentence transformer embeddings (`all-MiniLM-L6-v2`) for semantic evidence retrieval.
 - **Adaptive Confidence Calibration:** Incorporating empirical feedback loops from user interaction logs to adjust feature confidence weights dynamically.
 - **Lightweight ML-Assisted Fallback:** Training a lightweight XGBoost or GBDT classifier to assist rule hierarchy fallbacks for ambiguous messages.
-
----
-
-## 18. Author
-
-**Principal Software Engineer & AI Systems Architect**  
-- **GitHub:** [@demigod](https://github.com/demigod)  
-- **Project Repository:** [Automated Notification Routing System](https://github.com/demigod/notification-routing-system)  
-
 ---
 
 ## 19. License
