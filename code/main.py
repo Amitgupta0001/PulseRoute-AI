@@ -3,6 +3,7 @@ from context_retriever import ContextRetriever
 from models import IncomingMessage
 from feature_engine import FeatureEngine
 from router import NotificationRouter
+from evidence import EvidenceRetriever
 
 loader = DataLoader().load()
 
@@ -28,6 +29,11 @@ context = retriever.retrieve(message)
 features = FeatureEngine.build(message, context)
 router = NotificationRouter()
 decision = router.route(message, context)
+retriever = EvidenceRetriever()
+
+evidence = retriever.retrieve(message, context)
+
+print(evidence)
 
 print()
 
