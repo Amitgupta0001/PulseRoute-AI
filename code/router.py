@@ -1,4 +1,7 @@
 from feature_engine import FeatureEngine
+from confidence import ConfidenceEngine
+
+
 
 
 class NotificationRouter:
@@ -6,6 +9,7 @@ class NotificationRouter:
     def route(self, message, context):
 
         features = FeatureEngine.build(message, context)
+        confidence = ConfidenceEngine.calculate(features)
 
         # ----------------------------
         # 1. Scam Detection
@@ -19,7 +23,7 @@ class NotificationRouter:
                 "action": "mute",
                 "message_type": "scam",
                 "reason": "Possible scam or unsafe content.",
-                "confidence": 0.96,
+                "confidence": confidence,
             }
 
         # ----------------------------
@@ -34,7 +38,7 @@ class NotificationRouter:
                 "action": "notify",
                 "message_type": "payment",
                 "reason": "Trusted payment update from a known business.",
-                "confidence": 0.95,
+                "confidence": confidence,
             }
 
         # ----------------------------
@@ -48,14 +52,14 @@ class NotificationRouter:
                     "action": "digest",
                     "message_type": "promotion",
                     "reason": "Promotional message from an opted-in business.",
-                    "confidence": 0.84,
+                    "confidence": confidence,
                 }
 
             return {
                 "action": "mute",
                 "message_type": "promotion",
                 "reason": "Promotional message not relevant to this user.",
-                "confidence": 0.88,
+                "confidence": confidence,
             }
 
         # ----------------------------
@@ -67,7 +71,7 @@ class NotificationRouter:
                 "action": "notify",
                 "message_type": "event",
                 "reason": "Upcoming event may require attention.",
-                "confidence": 0.86,
+                "confidence": confidence,
             }
 
         # ----------------------------
@@ -82,7 +86,7 @@ class NotificationRouter:
                 "action": "notify",
                 "message_type": "urgent",
                 "reason": "Urgent personal communication.",
-                "confidence": 0.90,
+                "confidence": confidence,
             }
 
         # ----------------------------
@@ -98,7 +102,7 @@ class NotificationRouter:
                     "action": "mute",
                     "message_type": "unknown",
                     "reason": "User has muted this group.",
-                    "confidence": 0.93,
+                    "confidence": confidence,
                 }
 
             if membership["replies_sent_30d"] > 5:
@@ -107,7 +111,7 @@ class NotificationRouter:
                     "action": "notify",
                     "message_type": "personal",
                     "reason": "User actively participates in this group.",
-                    "confidence": 0.82,
+                    "confidence": confidence,
                 }
 
         # ----------------------------
@@ -119,7 +123,7 @@ class NotificationRouter:
                 "action": "notify",
                 "message_type": "personal",
                 "reason": "User frequently responds to similar messages.",
-                "confidence": 0.81,
+                "confidence": confidence,
             }
 
         if features["dismiss_rate"] > 0.50:
@@ -128,7 +132,7 @@ class NotificationRouter:
                 "action": "mute",
                 "message_type": "unknown",
                 "reason": "Similar messages are usually ignored.",
-                "confidence": 0.84,
+                "confidence": confidence,
             }
 
         # ----------------------------
@@ -138,5 +142,5 @@ class NotificationRouter:
             "action": "digest",
             "message_type": "unknown",
             "reason": "Useful but not urgent.",
-            "confidence": 0.72,
+            "confidence": confidence,
         }
