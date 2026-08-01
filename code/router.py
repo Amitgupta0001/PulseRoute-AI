@@ -1,3 +1,4 @@
+from hackathon.code import confidence
 from feature_engine import FeatureEngine
 from confidence import ConfidenceEngine
 
@@ -164,6 +165,20 @@ class NotificationRouter:
                 "reason": "User usually ignores similar messages.",
                 "confidence": confidence,
             }
+        # ----------------------------------------
+        # DO NOT DISTURB
+        # ----------------------------------------
+        if features["dnd"]:
+            if (
+                not features["urgent"]
+                and not features["payment"]
+            ):
+                return {
+                    "action": "digest",
+                    "message_type": "unknown",
+                    "reason": "Delivered during user's do-not-disturb window.",
+                    "confidence": confidence
+                }
 
         # -------------------------------------------------
         # DEFAULT
