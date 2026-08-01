@@ -9,19 +9,21 @@ class NotificationRouter:
         features = FeatureEngine.build(message, context)
         confidence = ConfidenceEngine.calculate(features)
 
-        group = context.group
-        membership = context.group_membership
-        business = context.business
-        business_history = context.business_history
+        group = context.group if context else None
+        membership = context.group_membership if context else None
+        business = context.business if context else None
+        business_history = context.business_history if context else None
 
         # =====================================================
         # 1. SCAM DETECTION
         # =====================================================
 
+        forwarded = message.forwarded_count if message else 0
+
         if (
-            features["possible_scam"]
-            or features["report_rate"] >= 0.20
-            or message.forwarded_count >= 10
+            features.get("possible_scam")
+            or features.get("report_rate", 0) >= 0.20
+            or forwarded >= 10
         ):
             return {
                 "action": "mute",
@@ -36,10 +38,13 @@ class NotificationRouter:
 
         if business is not None:
 
+            cat = business.get("category")
+            ver = business.get("verified")
+
             if (
-                business["category"] == "bank"
-                and business["verified"] == 1
-                and features["payment"]
+                cat == "bank"
+                and (ver == 1 or ver is True)
+                and features.get("payment")
             ):
 
                 return {
@@ -53,19 +58,20 @@ class NotificationRouter:
         # 3. PROMOTIONS
         # =====================================================
 
-        if features["promotion"]:
+        if features.get("promotion"):
 
-            if (
-                business_history is not None
-                and business_history["allows_promotions"] == 1
-            ):
+            if business_history is not None:
 
-                return {
-                    "action": "digest",
-                    "message_type": "promotion",
-                    "reason": "User is subscribed to promotional messages.",
-                    "confidence": confidence,
-                }
+                allows = business_history.get("allows_promotions")
+
+                if allows == 1 or allows is True:
+
+                    return {
+                        "action": "digest",
+                        "message_type": "promotion",
+                        "reason": "User is subscribed to promotional messages.",
+                        "confidence": confidence,
+                    }
 
             return {
                 "action": "mute",
@@ -80,7 +86,7 @@ class NotificationRouter:
 
         if group is not None:
 
-            if group["group_type"] == "family":
+            if group.get("group_type") == "family":
 
                 return {
                     "action": "notify",
@@ -96,8 +102,8 @@ class NotificationRouter:
         if group is not None:
 
             if (
-                group["group_type"] == "school"
-                and features["event"]
+                group.get("group_type") == "school"
+                and features.get("event")
             ):
 
                 return {
@@ -113,12 +119,11 @@ class NotificationRouter:
 
         if group is not None:
 
-            if group["group_type"] == "work":
+            if group.get("group_type") == "work":
 
-                if (
-                    membership is not None
-                    and membership["replies_sent_30d"] >= 5
-                ):
+                replies = membership.get("replies_sent_30d", 0) if membership else 0
+
+                if replies >= 5:
 
                     return {
                         "action": "notify",
@@ -138,27 +143,28 @@ class NotificationRouter:
         # 7. MUTED GROUP
         # =====================================================
 
-        if (
-            membership is not None
-            and membership["group_muted_by_user"] == 1
-        ):
+        if membership is not None:
 
-            return {
-                "action": "mute",
-                "message_type": "unknown",
-                "reason": "This group is muted by the user.",
-                "confidence": confidence,
-            }
+            muted = membership.get("group_muted_by_user")
+
+            if muted == 1 or muted is True:
+
+                return {
+                    "action": "mute",
+                    "message_type": "unknown",
+                    "reason": "This group is muted by the user.",
+                    "confidence": confidence,
+                }
 
         # =====================================================
         # 8. DO NOT DISTURB
         # =====================================================
 
-        if features["dnd"]:
+        if features.get("dnd"):
 
             if (
-                not features["urgent"]
-                and not features["payment"]
+                not features.get("urgent")
+                and not features.get("payment")
             ):
 
                 return {
@@ -172,7 +178,7 @@ class NotificationRouter:
         # 9. USER HISTORY
         # =====================================================
 
-        if features["reply_rate"] >= 0.40:
+        if features.get("reply_rate", 0) >= 0.40:
 
             return {
                 "action": "notify",
@@ -181,7 +187,7 @@ class NotificationRouter:
                 "confidence": confidence,
             }
 
-        if features["dismiss_rate"] >= 0.50:
+        if features.get("dismiss_rate", 0) >= 0.50:
 
             return {
                 "action": "mute",
@@ -194,17 +200,16 @@ class NotificationRouter:
         # 10. URGENT PERSONAL MESSAGE
         # =====================================================
 
-        if (
-            message.conversation_type == "personal"
-            and features["urgent"]
-        ):
+        if message and message.conversation_type == "personal":
 
-            return {
-                "action": "notify",
-                "message_type": "urgent",
-                "reason": "Urgent personal message.",
-                "confidence": confidence,
-            }
+            if features.get("urgent"):
+
+                return {
+                    "action": "notify",
+                    "message_type": "urgent",
+                    "reason": "Urgent personal message.",
+                    "confidence": confidence,
+                }
 
         # =====================================================
         # DEFAULT

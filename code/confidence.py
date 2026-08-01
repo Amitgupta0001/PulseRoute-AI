@@ -3,36 +3,41 @@ class ConfidenceEngine:
     @staticmethod
     def calculate(features):
 
+        if not features or not isinstance(features, dict):
+            return 0.50
+
         score = 0.50
 
-        if features["verified_business"]:
+        if features.get("verified_business"):
             score += 0.10
 
-        if features["known_business"]:
+        if features.get("known_business"):
             score += 0.10
 
-        if features["payment"]:
+        if features.get("payment"):
             score += 0.08
 
-        if features["urgent"]:
+        if features.get("urgent"):
             score += 0.06
 
-        if features["event"]:
+        if features.get("event"):
             score += 0.05
 
-        if features["promotion"]:
+        if features.get("promotion"):
             score -= 0.03
 
-        if features["possible_scam"]:
+        if features.get("possible_scam"):
             score += 0.12
 
-        if features["report_rate"] > 0.20:
+        if features.get("report_rate", 0) > 0.20:
             score += 0.10
 
-        if features["reply_rate"] > 0.40:
+        if features.get("reply_rate", 0) > 0.40:
             score += 0.05
 
-        if features["dismiss_rate"] > 0.50:
+        if features.get("dismiss_rate", 0) > 0.50:
             score += 0.05
 
-        return round(min(score, 0.99), 2)
+        final_score = max(0.01, min(score, 0.99))
+
+        return round(final_score, 2)

@@ -1,5 +1,6 @@
 import re
 from datetime import datetime
+import pandas as pd
 
 PAYMENT_KEYWORDS = {
     "bill",
@@ -48,7 +49,8 @@ SCAM_KEYWORDS = {
     "investment",
     "click here",
     "payment link",
-    "wallet kyc"
+    "wallet kyc",
+    "login code"
 }
 
 EVENT_KEYWORDS = {
@@ -63,115 +65,141 @@ EVENT_KEYWORDS = {
 }
 
 
+def _safe_int(val):
+    if val is None or pd.isna(val):
+        return 0
+    try:
+        return int(val)
+    except (ValueError, TypeError):
+        return 0
+
+
 class FeatureEngine:
 
     @staticmethod
     def contains(text, keywords):
 
-        if not isinstance(text, str):
+        if not isinstance(text, str) or not text:
             return False
 
-        text = text.lower()
+        text_lower = text.lower()
 
-        return any(word in text for word in keywords)
+        for kw in keywords:
+            kw_lower = kw.lower()
+            if " " in kw_lower:
+                if kw_lower in text_lower:
+                    return True
+            else:
+                pattern = r'\b' + re.escape(kw_lower) + r'\b'
+                if re.search(pattern, text_lower):
+                    return True
+
+        return False
 
     @staticmethod
     def build(message, context):
 
         text = message.message_text or ""
 
-        history = context.history
-        events = context.events
+        history = context.history if context and context.history else []
+        events = context.events if context and context.events else []
 
-        opened = sum(e["message_opened"] for e in events)
-        replied = sum(e["message_replied"] for e in events)
-        dismissed = sum(e["notification_dismissed"] for e in events)
-        reported = sum(e["message_reported"] for e in events)
+        opened = sum(_safe_int(e.get("message_opened")) for e in events)
+        replied = sum(_safe_int(e.get("message_replied")) for e in events)
+        dismissed = sum(_safe_int(e.get("notification_dismissed")) for e in events)
+        reported = sum(_safe_int(e.get("message_reported")) for e in events)
+
+        known_biz = context.business_history is not None if context else False
+        promo_allowed = False
+        if context and context.business_history:
+            val = context.business_history.get("allows_promotions")
+            promo_allowed = bool(val == 1 or val is True)
+
+        verified_biz = False
+        if context and context.business:
+            val = context.business.get("verified")
+            verified_biz = bool(val == 1 or val is True)
+
+        hist_count = len(history)
 
         return {
 
-            "verified_business":
-            bool(context.business and context.business["verified"]),
+            "verified_business": verified_biz,
 
-            "known_business":
-            context.business_history is not None,
+            "known_business": known_biz,
 
-            "promotion_allowed":
-            bool(
-                context.business_history
-                and context.business_history["allows_promotions"]
-            ),
+            "promotion_allowed": promo_allowed,
 
-            "forwarded":
-            message.forwarded_count,
+            "forwarded": message.forwarded_count if message else 0,
 
-            "payment":
-            FeatureEngine.contains(text, PAYMENT_KEYWORDS),
+            "payment": FeatureEngine.contains(text, PAYMENT_KEYWORDS),
 
-            "urgent":
-            FeatureEngine.contains(text, URGENT_KEYWORDS),
+            "urgent": FeatureEngine.contains(text, URGENT_KEYWORDS),
 
-            "promotion":
-            FeatureEngine.contains(text, PROMOTION_KEYWORDS),
+            "promotion": FeatureEngine.contains(text, PROMOTION_KEYWORDS),
 
-            "event":
-            FeatureEngine.contains(text, EVENT_KEYWORDS),
+            "event": FeatureEngine.contains(text, EVENT_KEYWORDS),
 
-            "possible_scam":
-            FeatureEngine.contains(text, SCAM_KEYWORDS),
+            "possible_scam": FeatureEngine.contains(text, SCAM_KEYWORDS),
 
-            "history_messages":
-            len(history),
+            "dnd": FeatureEngine.is_in_dnd_window(message, context),
 
-            "opened":
-            opened,
+            "history_messages": hist_count,
 
-            "replied":
-            replied,
+            "opened": opened,
 
-            "dismissed":
-            dismissed,
+            "replied": replied,
 
-            "reported":
-            reported,
+            "dismissed": dismissed,
 
-            "reply_rate":
-            replied / max(1, len(history)),
+            "reported": reported,
 
-            "open_rate":
-            opened / max(1, len(history)),
+            "reply_rate": replied / max(1, hist_count),
 
-            "dismiss_rate":
-            dismissed / max(1, len(history)),
+            "open_rate": opened / max(1, hist_count),
 
-            "report_rate":
-            reported / max(1, len(history))
+            "dismiss_rate": dismissed / max(1, hist_count),
+
+            "report_rate": reported / max(1, hist_count)
         }
 
     @staticmethod
     def is_in_dnd_window(message, context):
 
+        if not context or not context.user or not message or not message.created_at:
+            return False
+
         user = context.user
+        window = user.get("do_not_disturb_window")
 
-        if user is None:
+        if not isinstance(window, str) or "-" not in window:
             return False
 
-        window = user["do_not_disturb_window"]
+        try:
+            parts = window.split("-")
+            if len(parts) != 2:
+                return False
 
-        if not isinstance(window, str):
+            start_str, end_str = parts[0].strip(), parts[1].strip()
+
+            created_str = str(message.created_at).strip()
+            msg_time = None
+            for fmt in ("%Y-%m-%d %H:%M", "%Y-%m-%d %H:%M:%S", "%H:%M"):
+                try:
+                    msg_time = datetime.strptime(created_str, fmt).time()
+                    break
+                except ValueError:
+                    continue
+
+            if msg_time is None:
+                return False
+
+            start = datetime.strptime(start_str, "%H:%M").time()
+            end = datetime.strptime(end_str, "%H:%M").time()
+
+            if start < end:
+                return start <= msg_time <= end
+
+            return msg_time >= start or msg_time <= end
+        except Exception:
             return False
-
-        start, end = window.split("-")
-
-        msg_time = datetime.strptime(
-            message.created_at,
-            "%Y-%m-%d %H:%M"
-        ).time()
-
-        start = datetime.strptime(start, "%H:%M").time()
-        end = datetime.strptime(end, "%H:%M").time()
-
-        if start < end:
-            return start <= msg_time <= end
-
-        return msg_time >= start or msg_time <= end

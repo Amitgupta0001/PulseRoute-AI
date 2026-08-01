@@ -4,7 +4,7 @@ from models import IncomingMessage
 from feature_engine import FeatureEngine
 from router import NotificationRouter
 from evidence import EvidenceRetriever
-from generate_output import *
+from generate_output import generate_predictions
 
 loader = DataLoader().load()
 
@@ -30,19 +30,21 @@ context = retriever.retrieve(message)
 features = FeatureEngine.build(message, context)
 router = NotificationRouter()
 decision = router.route(message, context)
-retriever = EvidenceRetriever()
+evidence_retriever = EvidenceRetriever()
 
-evidence = retriever.retrieve(message, context)
+evidence = evidence_retriever.retrieve(message, context)
 
-print(evidence)
+print("Sample Message Evidence:", evidence)
 
 print()
 
 print("=" * 60)
 
-print(decision)
+print("Sample Message Decision:", decision)
 
+print("Features:")
 for key, value in features.items():
     print(f"{key:25} : {value}")
 
-print(context)
+print("\nGenerating output predictions for all messages...")
+generate_predictions()
