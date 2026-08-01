@@ -41,11 +41,11 @@ msg_006,notify,personal,User usually responds to similar messages.,0.81,message_
 msg_109,notify,personal,User usually responds to similar messages.,0.78,message_0151;message_0152;message_0237
 msg_108,mute,scam,Suspicious or scam-like message detected.,0.9,message_0094;message_0093;message_0236
 msg_019,mute,scam,Suspicious or scam-like message detected.,0.85,message_0277;message_0094;message_0236
-msg_088,mute,unknown,This group is muted by the user.,0.78,message_0050;message_0335;message_0224
+msg_088,mute,unknown,This group is muted by the user.,0.78,message_0224;message_0050;message_0115
 msg_056,notify,personal,Family conversations are prioritized.,0.78,message_0168;message_0167;message_0226
 msg_027,digest,unknown,Useful but not immediately important.,0.82,message_0272;message_0033;message_0007
 msg_050,notify,personal,User usually responds to similar messages.,0.81,message_0279;message_0278;message_0155
-msg_083,notify,personal,User usually responds to similar messages.,0.78,message_0219
+msg_083,notify,personal,User usually responds to similar messages.,0.81,message_0219
 msg_063,notify,personal,User usually responds to similar messages.,0.81,message_0182;message_0181
 msg_033,mute,promotion,Promotional content not relevant to this user.,0.83,message_0121;message_0122;message_0280
 msg_061,notify,personal,Family conversations are prioritized.,0.81,message_0177;message_0193;message_0042
@@ -60,7 +60,7 @@ msg_079,mute,scam,Suspicious or scam-like message detected.,0.8,message_0213;mes
 msg_098,notify,personal,User usually responds to similar messages.,0.78,message_0226;message_0359;message_0054
 msg_037,notify,personal,User usually responds to similar messages.,0.78,message_0001;message_0216;message_0130
 msg_007,mute,scam,Suspicious or scam-like message detected.,0.82,message_0070;message_0069
-msg_085,digest,unknown,Delivered during do-not-disturb hours.,0.73,message_0221
+msg_085,mute,scam,Suspicious or scam-like message detected.,0.86,message_0221
 msg_001,notify,personal,User usually responds to similar messages.,0.78,message_0240;message_0057;message_0058
 msg_021,mute,scam,Suspicious or scam-like message detected.,0.89,message_0098;message_0068;message_0030
 msg_028,mute,promotion,Promotional content not relevant to this user.,0.87,message_0034;message_0402;message_0111
@@ -105,7 +105,7 @@ msg_062,digest,unknown,Delivered during do-not-disturb hours.,0.76,message_0043;
 msg_096,notify,personal,User usually responds to similar messages.,0.78,none
 msg_043,mute,scam,Suspicious or scam-like message detected.,0.78,message_0098;message_0068;message_0030
 msg_077,digest,unknown,Delivered during do-not-disturb hours.,0.76,message_0403;message_0051;message_0255
-msg_081,notify,personal,User usually responds to similar messages.,0.78,message_0217
+msg_081,notify,personal,User usually responds to similar messages.,0.81,message_0217
 msg_025,notify,personal,User usually responds to similar messages.,0.88,message_0239;message_0004;message_0105
-msg_084,mute,scam,Suspicious or scam-like message detected.,0.89,message_0220
+msg_084,mute,scam,Suspicious or scam-like message detected.,0.94,message_0220
 msg_022,notify,personal,User usually responds to similar messages.,0.84,message_0100;message_0099;message_0151
