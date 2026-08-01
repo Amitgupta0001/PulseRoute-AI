@@ -2,8 +2,6 @@ from feature_engine import FeatureEngine
 from confidence import ConfidenceEngine
 
 
-
-
 class NotificationRouter:
 
     def route(self, message, context):
@@ -11,118 +9,150 @@ class NotificationRouter:
         features = FeatureEngine.build(message, context)
         confidence = ConfidenceEngine.calculate(features)
 
-        # ----------------------------
-        # 1. Scam Detection
-        # ----------------------------
+        group = context.group
+        membership = context.group_membership
+        business = context.business
+        business_history = context.business_history
+
+        # -------------------------------------------------
+        # SCAM
+        # -------------------------------------------------
+
         if (
             features["possible_scam"]
             or features["report_rate"] > 0.20
-            or features["forwarded"] >= 10
+            or message.forwarded_count >= 10
         ):
             return {
                 "action": "mute",
                 "message_type": "scam",
-                "reason": "Possible scam or unsafe content.",
+                "reason": "Potential scam or suspicious content.",
                 "confidence": confidence,
             }
 
-        # ----------------------------
-        # 2. Trusted Payment Messages
-        # ----------------------------
-        if (
-            features["payment"]
-            and features["verified_business"]
-            and features["known_business"]
-        ):
-            return {
-                "action": "notify",
-                "message_type": "payment",
-                "reason": "Trusted payment update from a known business.",
-                "confidence": confidence,
-            }
+        # -------------------------------------------------
+        # VERIFIED BANK
+        # -------------------------------------------------
 
-        # ----------------------------
-        # 3. Promotion
-        # ----------------------------
-        if features["promotion"]:
+        if business:
 
-            if features["promotion_allowed"]:
+            category = business["category"]
+
+            if (
+                category == "bank"
+                and business["verified"] == 1
+                and features["payment"]
+            ):
 
                 return {
-                    "action": "digest",
-                    "message_type": "promotion",
-                    "reason": "Promotional message from an opted-in business.",
+                    "action": "notify",
+                    "message_type": "payment",
+                    "reason": "Trusted banking update requiring attention.",
                     "confidence": confidence,
                 }
 
-            return {
-                "action": "mute",
-                "message_type": "promotion",
-                "reason": "Promotional message not relevant to this user.",
-                "confidence": confidence,
-            }
+        # -------------------------------------------------
+        # PROMOTIONS
+        # -------------------------------------------------
 
-        # ----------------------------
-        # 4. Events
-        # ----------------------------
-        if features["event"]:
+        if business_history:
 
-            return {
-                "action": "notify",
-                "message_type": "event",
-                "reason": "Upcoming event may require attention.",
-                "confidence": confidence,
-            }
+            if (
+                features["promotion"]
+                and business_history["allows_promotions"] == 0
+            ):
 
-        # ----------------------------
-        # 5. Urgent Personal
-        # ----------------------------
-        if (
-            message.conversation_type == "personal"
-            and features["urgent"]
-        ):
+                return {
+                    "action": "mute",
+                    "message_type": "promotion",
+                    "reason": "User has not opted in to promotions.",
+                    "confidence": confidence,
+                }
 
-            return {
-                "action": "notify",
-                "message_type": "urgent",
-                "reason": "Urgent personal communication.",
-                "confidence": confidence,
-            }
+        # -------------------------------------------------
+        # FAMILY GROUP
+        # -------------------------------------------------
 
-        # ----------------------------
-        # 6. Group Behaviour
-        # ----------------------------
-        membership = context.group_membership
+        if group:
 
-        if membership is not None:
+            if group["group_type"] == "family":
+
+                return {
+                    "action": "notify",
+                    "message_type": "personal",
+                    "reason": "Family messages are prioritized.",
+                    "confidence": confidence,
+                }
+
+        # -------------------------------------------------
+        # SCHOOL GROUP
+        # -------------------------------------------------
+
+        if group:
+
+            if (
+                group["group_type"] == "school"
+                and features["event"]
+            ):
+
+                return {
+                    "action": "notify",
+                    "message_type": "event",
+                    "reason": "Important school update.",
+                    "confidence": confidence,
+                }
+
+        # -------------------------------------------------
+        # WORK GROUP
+        # -------------------------------------------------
+
+        if group:
+
+            if group["group_type"] == "work":
+
+                if membership:
+
+                    if membership["replies_sent_30d"] >= 5:
+
+                        return {
+                            "action": "notify",
+                            "message_type": "personal",
+                            "reason": "Active work conversation.",
+                            "confidence": confidence,
+                        }
+
+                return {
+                    "action": "digest",
+                    "message_type": "personal",
+                    "reason": "Work-related discussion.",
+                    "confidence": confidence,
+                }
+
+        # -------------------------------------------------
+        # MUTED GROUP
+        # -------------------------------------------------
+
+        if membership:
 
             if membership["group_muted_by_user"] == 1:
 
                 return {
                     "action": "mute",
                     "message_type": "unknown",
-                    "reason": "User has muted this group.",
+                    "reason": "User muted this group.",
                     "confidence": confidence,
                 }
 
-            if membership["replies_sent_30d"] > 5:
+        # -------------------------------------------------
+        # HISTORY
+        # -------------------------------------------------
 
-                return {
-                    "action": "notify",
-                    "message_type": "personal",
-                    "reason": "User actively participates in this group.",
-                    "confidence": confidence,
-                }
-
-        # ----------------------------
-        # 7. Historical Behaviour
-        # ----------------------------
-        if features["reply_rate"] > 0.40:
+        if features["reply_rate"] > 0.50:
 
             return {
                 "action": "notify",
                 "message_type": "personal",
-                "reason": "User frequently responds to similar messages.",
+                "reason": "User frequently replies to similar messages.",
                 "confidence": confidence,
             }
 
@@ -131,16 +161,17 @@ class NotificationRouter:
             return {
                 "action": "mute",
                 "message_type": "unknown",
-                "reason": "Similar messages are usually ignored.",
+                "reason": "User usually ignores similar messages.",
                 "confidence": confidence,
             }
 
-        # ----------------------------
-        # Default
-        # ----------------------------
+        # -------------------------------------------------
+        # DEFAULT
+        # -------------------------------------------------
+
         return {
             "action": "digest",
             "message_type": "unknown",
-            "reason": "Useful but not urgent.",
+            "reason": "Useful but not immediately important.",
             "confidence": confidence,
         }
