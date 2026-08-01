@@ -5,6 +5,8 @@ from models import IncomingMessage
 from context_retriever import ContextRetriever
 from router import NotificationRouter
 from evidence import EvidenceRetriever
+from media.ocr import OCREngine
+from media.speech import SpeechEngine
 
 
 def generate_predictions():
@@ -12,6 +14,24 @@ def generate_predictions():
     context_retriever = ContextRetriever(loader)
     router = NotificationRouter()
     evidence_engine = EvidenceRetriever()
+    ocr_engine = OCREngine()
+    speech_engine = SpeechEngine()
+
+    images_map = {}
+    if loader.images is not None and not loader.images.empty:
+        for _, row in loader.images.iterrows():
+            img_id = row.get("image_id")
+            file_p = row.get("file_path")
+            if img_id and file_p and pd.notna(img_id) and pd.notna(file_p):
+                images_map[str(img_id)] = DATASET_DIR / str(file_p)
+
+    voice_map = {}
+    if loader.voice_notes is not None and not loader.voice_notes.empty:
+        for _, row in loader.voice_notes.iterrows():
+            vn_id = row.get("voice_note_id")
+            file_p = row.get("file_path")
+            if vn_id and file_p and pd.notna(vn_id) and pd.notna(file_p):
+                voice_map[str(vn_id)] = DATASET_DIR / str(file_p)
 
     results = []
 
@@ -29,6 +49,20 @@ def generate_predictions():
             media_id=row["media_id"],
             forwarded_count=row["forwarded_count"],
         )
+
+        if not message.message_text or pd.isna(message.message_text):
+            if message.media_type == "image" or (message.media_id and str(message.media_id) in images_map):
+                img_path = images_map.get(str(message.media_id))
+                if img_path and img_path.is_file():
+                    extracted_text = ocr_engine.extract_text(str(img_path))
+                    if extracted_text:
+                        message.message_text = extracted_text
+            elif message.media_type == "voice" or (message.media_id and str(message.media_id) in voice_map):
+                audio_path = voice_map.get(str(message.media_id))
+                if audio_path and audio_path.is_file():
+                    transcript = speech_engine.transcribe(str(audio_path))
+                    if transcript:
+                        message.message_text = transcript
 
         context = context_retriever.retrieve(message)
         decision = router.route(message, context)
