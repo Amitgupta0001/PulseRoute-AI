@@ -375,6 +375,6 @@ Future architectural extensions for production scaling include:
 - **Lightweight ML-Assisted Fallback:** Training a lightweight XGBoost or GBDT classifier to assist rule hierarchy fallbacks for ambiguous messages.
 ---
 
-## 19. License
+## 18. License
 
 This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
